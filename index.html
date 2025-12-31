@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>九九免許証ジェネレーター</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel (for JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts (Rounded M+) -->
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'M PLUS Rounded 1c', sans-serif; }
+        /* 印刷時の設定 */
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            @page { size: A4; margin: 10mm; }
+            .license-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 0; }
+        }
+        /* スクロールバーのカスタマイズ */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // --- アイコンコンポーネント ---
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+        const PrinterIcon = (props) => <IconWrapper {...props}><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></IconWrapper>;
+        const UsersIcon = (props) => <IconWrapper {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></IconWrapper>;
+        const SettingsIcon = (props) => <IconWrapper {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></IconWrapper>;
+        const UserPlusIcon = (props) => <IconWrapper {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></IconWrapper>;
+        const XIcon = (props) => <IconWrapper {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconWrapper>;
+        const UploadIcon = (props) => <IconWrapper {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></IconWrapper>;
+        const RefreshCwIcon = (props) => <IconWrapper {...props}><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></IconWrapper>;
+        const ImageIcon = (props) => <IconWrapper {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></IconWrapper>;
+        const SaveIcon = (props) => <IconWrapper {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></IconWrapper>;
+        const DownloadIcon = (props) => <IconWrapper {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></IconWrapper>;
+        const FileUpIcon = (props) => <IconWrapper {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="12" y2="12"></line><line x1="15" y1="15" x2="12" y2="12"></line></IconWrapper>;
+        const CropIcon = (props) => <IconWrapper {...props}><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"></path><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"></path></IconWrapper>;
+        const CheckIcon = (props) => <IconWrapper {...props}><polyline points="20 6 9 17 4 12"></polyline></IconWrapper>;
+        const IdCardIcon = (props) => <IconWrapper {...props}><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="9" cy="10" r="2"></circle><line x1="15" y1="8" x2="17" y2="8"></line><line x1="15" y1="12" x2="17" y2="12"></line><path d="M7 16h4"></path></IconWrapper>;
+
+
+        // --- 初期データ (空にする) ---
+        const INITIAL_STUDENTS_TEXT = "";
+        const PLACEHOLDER_TEXT = `(例)\n山田 太郎, 2016-04-01, 2101\n鈴木 花子, 2016-05-15, 2102\n佐藤 健太, 2016/06/20, 2103`;
+
+        // --- 画像リサイズ関数 ---
+        const resizeImage = (dataUrl, maxWidth = 300) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = dataUrl;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ratio = maxWidth / img.width;
+                    if (ratio >= 1) { resolve(dataUrl); return; }
+                    canvas.width = maxWidth;
+                    canvas.height = img.height * ratio;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+                img.onerror = () => resolve(dataUrl);
+            });
+        };
+
+        // --- ローカルストレージからデータを同期的に読み込む関数 ---
+        const loadSavedData = () => {
+            try {
+                const data = localStorage.getItem('kukuLicenseData');
+                return data ? JSON.parse(data) : null;
+            } catch (e) {
+                console.error("Failed to load saved data", e);
+                return null;
+            }
+        };
+
+        // --- 画像トリミングコンポーネント ---
+        const ImageCropper = ({ src, onComplete, onCancel }) => {
+            const canvasRef = useRef(null);
+            const imgRef = useRef(null);
+            const [scale, setScale] = useState(1);
+            const [position, setPosition] = useState({ x: 0, y: 0 });
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+            const ASPECT_RATIO = 20 / 24; // 免許証写真のアスペクト比
+            const CROP_WIDTH = 200;
+            const CROP_HEIGHT = CROP_WIDTH / ASPECT_RATIO;
+
+            const handleMouseDown = (e) => {
+                setIsDragging(true);
+                setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+            };
+
+            const handleMouseMove = (e) => {
+                if (!isDragging) return;
+                setPosition({
+                    x: e.clientX - dragStart.x,
+                    y: e.clientY - dragStart.y
+                });
+            };
+
+            const handleMouseUp = () => {
+                setIsDragging(false);
+            };
+
+            const handleComplete = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = CROP_WIDTH;
+                canvas.height = CROP_HEIGHT;
+                const ctx = canvas.getContext('2d');
+
+                if (imgRef.current) {
+                    const img = imgRef.current;
+                    const centerX = CROP_WIDTH / 2;
+                    const centerY = CROP_HEIGHT / 2;
+                    
+                    ctx.fillStyle = "#FFFFFF";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.translate(centerX + position.x, centerY + position.y);
+                    ctx.scale(scale, scale);
+                    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+                    
+                    onComplete(canvas.toDataURL('image/jpeg', 0.9));
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+                    <div className="bg-white p-4 rounded-xl shadow-2xl w-full max-w-md flex flex-col items-center">
+                        <h3 className="text-lg font-bold mb-4 text-gray-700 flex items-center gap-2">
+                            <CropIcon size={20}/> 写真の調整
+                        </h3>
+                        
+                        <div className="relative overflow-hidden bg-gray-100 mb-4 border-2 border-blue-500 rounded cursor-move"
+                             style={{ width: CROP_WIDTH, height: CROP_HEIGHT }}
+                             onMouseDown={handleMouseDown}>
+                            <img 
+                                ref={imgRef}
+                                src={src} 
+                                alt="Crop target" 
+                                className="absolute max-w-none origin-center select-none pointer-events-none"
+                                style={{ 
+                                    transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                                    left: '50%',
+                                    top: '50%'
+                                }}
+                            />
+                            {/* グリッド線 */}
+                            <div className="absolute inset-0 pointer-events-none opacity-30">
+                                <div className="w-full h-1/3 border-b border-white/50 absolute top-0"></div>
+                                <div className="w-full h-2/3 border-b border-white/50 absolute top-0"></div>
+                                <div className="h-full w-1/3 border-r border-white/50 absolute left-0"></div>
+                                <div className="h-full w-2/3 border-r border-white/50 absolute left-0"></div>
+                            </div>
+                        </div>
+
+                        <div className="w-full px-4 mb-6">
+                            <label className="block text-xs text-gray-500 mb-1">拡大・縮小</label>
+                            <input 
+                                type="range" 
+                                min="0.1" 
+                                max="3" 
+                                step="0.05" 
+                                value={scale} 
+                                onChange={(e) => setScale(parseFloat(e.target.value))}
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                            />
+                        </div>
+
+                        <div className="flex gap-3 w-full">
+                            <button onClick={onCancel} className="flex-1 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold transition-colors">
+                                キャンセル
+                            </button>
+                            <button onClick={handleComplete} className="flex-1 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors">
+                                <CheckIcon size={16}/> 完了
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-3 text-center">
+                            画像をドラッグして位置を調整できます
+                        </p>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- メインアプリコンポーネント ---
+        const KukuLicenseApp = () => {
+            const [savedData] = useState(() => loadSavedData());
+
+            // --- State: 基本設定 ---
+            const [schoolName, setSchoolName] = useState(savedData?.schoolName ?? '○○市立○○小学校');
+            const [address, setAddress] = useState(savedData?.address ?? '○○県○○市○○町 1-2-3');
+            const [teacherName, setTeacherName] = useState(savedData?.teacherName ?? '先生 名前');
+            const [issueDate, setIssueDate] = useState(savedData?.issueDate ?? new Date().toISOString().split('T')[0]);
+            
+            const [licenseNumberPrefix, setLicenseNumberPrefix] = useState(savedData?.licenseNumberPrefix ?? (() => {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                return `第 ${year}${month}`;
+            })());
+
+            const [gradeLabel, setGradeLabel] = useState(savedData?.gradeLabel ?? '○○市立\n○○小学校');
+
+            // --- State: 免許証設定 (新設) ---
+            const [licenseTitle, setLicenseTitle] = useState(savedData?.licenseTitle ?? '九九免許証');
+            const [validityText, setValidityText] = useState(savedData?.validityText ?? 'かけ算九九を覚えている間有効');
+            const [condition1, setCondition1] = useState(savedData?.condition1 ?? '九九をすらすらということができる');
+            const [condition2, setCondition2] = useState(savedData?.condition2 ?? '九九を使って計算することができる');
+            // 種類(5つ): 改行区切りで上段・下段を分ける想定
+            const [categories, setCategories] = useState(savedData?.categories ?? [
+                '1・2\nの段', '3・4\nの段', '5・6\nの段', '7・8\nの段', '9\nの段'
+            ]);
+            
+            // State: データ
+            const [inputText, setInputText] = useState(savedData?.inputText ?? INITIAL_STUDENTS_TEXT);
+            const [students, setStudents] = useState([]);
+            const [photos, setPhotos] = useState(savedData?.photos ?? {});
+            
+            const [saveStatus, setSaveStatus] = useState('');
+            const [croppingData, setCroppingData] = useState(null);
+            const [isResetConfirming, setIsResetConfirming] = useState(false);
+
+            const fileInputRef = useRef(null);
+            const jsonInputRef = useRef(null);
+            const isFirstRender = useRef(true);
+
+            // --- ローカルストレージへの自動保存 ---
+            useEffect(() => {
+                if (isFirstRender.current) {
+                    isFirstRender.current = false;
+                    return;
+                }
+                if (saveStatus !== '変更中...') setSaveStatus('変更中...');
+
+                const timer = setTimeout(() => {
+                    const dataToSave = {
+                        schoolName, address, teacherName, issueDate, 
+                        licenseNumberPrefix, gradeLabel, inputText, photos,
+                        // 新しい項目も保存
+                        licenseTitle, validityText, condition1, condition2, categories
+                    };
+                    try {
+                        localStorage.setItem('kukuLicenseData', JSON.stringify(dataToSave));
+                        setSaveStatus('自動保存完了');
+                    } catch (e) {
+                        console.error("Save failed", e);
+                        setSaveStatus('自動保存失敗 (容量?)');
+                    }
+                    setTimeout(() => setSaveStatus(''), 3000);
+                }, 1000);
+                return () => clearTimeout(timer);
+            }, [schoolName, address, teacherName, issueDate, licenseNumberPrefix, gradeLabel, inputText, photos, licenseTitle, validityText, condition1, condition2, categories]);
+
+            useEffect(() => {
+                const lines = inputText.split('\n');
+                const parsed = lines.map((line, index) => {
+                    const parts = line.split(/[,\t]/).map(s => s.trim());
+                    if (parts.length < 2) return null;
+                    let dob = parts[1] || '';
+                    dob = dob.replace(/\//g, '-');
+                    return {
+                        id: `st-${index}`,
+                        name: parts[0] || '',
+                        dob: dob,
+                        classNum: '', 
+                        studentNum: parts[2] || '',
+                    };
+                }).filter(s => s !== null);
+                setStudents(parsed);
+            }, [inputText]);
+
+            const handleExportData = () => {
+                const dataToSave = {
+                    schoolName, address, teacherName, issueDate, 
+                    licenseNumberPrefix, gradeLabel, inputText, photos,
+                    licenseTitle, validityText, condition1, condition2, categories
+                };
+                const blob = new Blob([JSON.stringify(dataToSave)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `kuku_license_data_${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const handleImportData = (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const loadedData = JSON.parse(event.target.result);
+                        if (loadedData.schoolName !== undefined) setSchoolName(loadedData.schoolName);
+                        if (loadedData.address !== undefined) setAddress(loadedData.address);
+                        if (loadedData.teacherName !== undefined) setTeacherName(loadedData.teacherName);
+                        if (loadedData.issueDate !== undefined) setIssueDate(loadedData.issueDate);
+                        if (loadedData.licenseNumberPrefix !== undefined) setLicenseNumberPrefix(loadedData.licenseNumberPrefix);
+                        if (loadedData.gradeLabel !== undefined) setGradeLabel(loadedData.gradeLabel);
+                        if (loadedData.inputText !== undefined) setInputText(loadedData.inputText);
+                        if (loadedData.photos !== undefined) setPhotos(loadedData.photos);
+                        // 新項目の読み込み
+                        if (loadedData.licenseTitle !== undefined) setLicenseTitle(loadedData.licenseTitle);
+                        if (loadedData.validityText !== undefined) setValidityText(loadedData.validityText);
+                        if (loadedData.condition1 !== undefined) setCondition1(loadedData.condition1);
+                        if (loadedData.condition2 !== undefined) setCondition2(loadedData.condition2);
+                        if (loadedData.categories !== undefined) setCategories(loadedData.categories);
+                        
+                        alert("データを読み込みました！");
+                    } catch (err) {
+                        alert("ファイルの読み込みに失敗しました。");
+                    }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+            };
+            const triggerJsonUpload = () => jsonInputRef.current?.click();
+
+            const handlePhotoDrop = (id, dataUrl) => { setCroppingData({ id, src: dataUrl }); };
+            const handleCropComplete = async (croppedDataUrl) => {
+                if (croppingData) {
+                    const resized = await resizeImage(croppedDataUrl, 300);
+                    setPhotos(prev => ({ ...prev, [croppingData.id]: resized }));
+                    setCroppingData(null);
+                }
+            };
+            const handlePhotoRemove = (id) => { setPhotos(prev => { const next = { ...prev }; delete next[id]; return next; }); };
+            const handleFileUpload = (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => { if (event.target?.result) setInputText(event.target.result); };
+                reader.readAsText(file);
+                e.target.value = '';
+            };
+            const handleResetList = (e) => {
+                e.preventDefault(); 
+                if (isResetConfirming) {
+                    setInputText(INITIAL_STUDENTS_TEXT);
+                    setPhotos({});
+                    const dataToSave = { 
+                        schoolName, address, teacherName, issueDate, licenseNumberPrefix, gradeLabel, 
+                        inputText: INITIAL_STUDENTS_TEXT, photos: {},
+                        licenseTitle, validityText, condition1, condition2, categories
+                    };
+                    try { localStorage.setItem('kukuLicenseData', JSON.stringify(dataToSave)); setSaveStatus('初期化完了'); setTimeout(() => setSaveStatus(''), 3000); } catch(err) { console.error(err); }
+                    setIsResetConfirming(false);
+                } else {
+                    setIsResetConfirming(true);
+                    setTimeout(() => setIsResetConfirming(false), 3000);
+                }
+            };
+            const triggerFileUpload = () => { fileInputRef.current?.click(); };
+
+            // カテゴリ（種類）の変更ハンドラ
+            const handleCategoryChange = (index, value) => {
+                const newCategories = [...categories];
+                newCategories[index] = value;
+                setCategories(newCategories);
+            };
+
+            const handlePrint = () => {
+                const printContent = document.getElementById('print-area')?.innerHTML;
+                if (!printContent) return;
+                const printWindow = window.open('', '_blank', 'width=1000,height=800');
+                if (!printWindow) { alert("ポップアップがブロックされました。"); return; }
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                        <head><title>${licenseTitle} - 印刷プレビュー</title>
+                        <script src="https://cdn.tailwindcss.com"></` + `script>
+                        <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+                        <style>body { font-family: 'M PLUS Rounded 1c', sans-serif; -webkit-print-color-adjust: exact; } @page { size: A4; margin: 10mm; } .license-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 1rem; }</style>
+                        </head>
+                        <body class="bg-gray-100 p-8 print:p-0 print:bg-white">
+                        <div class="text-center mb-8 print:hidden"><h1 class="text-2xl font-bold mb-2">印刷プレビュー</h1><button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold shadow hover:bg-blue-700">印刷を実行する</button></div>
+                        <div class="grid grid-cols-2 gap-4 max-w-[210mm] mx-auto print:max-w-none print:w-full">${printContent}</div>
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                setTimeout(() => { printWindow.focus(); }, 500);
+            };
+            const formatDateJP = (dateStr) => {
+                if (!dateStr) return '';
+                try {
+                    const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) return dateStr;
+                    return new Intl.DateTimeFormat('ja-JP-u-ca-japanese', { era: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(date);
+                } catch (e) { return dateStr; }
+            };
+            const formatDOB = (dateStr) => {
+                if (!dateStr) return '平成28年4月1日生';
+                try {
+                    const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) return dateStr;
+                    return new Intl.DateTimeFormat('ja-JP-u-ca-japanese', { era: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(date) + '生';
+                } catch (e) { return dateStr; }
+            };
+
+            return (
+                <div className="p-6 bg-gray-100 min-h-screen">
+                    {croppingData && <ImageCropper src={croppingData.src} onComplete={handleCropComplete} onCancel={() => setCroppingData(null)} />}
+                    <div className="no-print max-w-full mx-auto flex flex-col gap-6">
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 flex flex-wrap gap-2 items-center justify-between">
+                            <span className="text-sm text-blue-800 font-bold flex items-center gap-2"><SaveIcon size={16}/> データの保存・読込</span>
+                            <div className="flex gap-2">
+                                <button onClick={handleExportData} type="button" className="bg-white hover:bg-blue-100 text-blue-700 border border-blue-300 px-3 py-1.5 rounded text-sm flex items-center gap-1 transition-colors"><DownloadIcon size={14}/> データを保存</button>
+                                <button onClick={triggerJsonUpload} type="button" className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1 transition-colors"><FileUpIcon size={14}/> データを読込</button>
+                                <input type="file" ref={jsonInputRef} onChange={handleImportData} accept=".json" className="hidden" />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* 左カラム */}
+                            <div className="space-y-6">
+                                {/* 基本設定 */}
+                                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-xl font-bold flex items-center gap-2 text-blue-600"><SettingsIcon size={20} /> 基本情報の設定</h2>
+                                        <span className={`text-xs font-bold transition-colors duration-300 ${saveStatus === '自動保存完了' ? 'text-green-600' : (saveStatus.includes('失敗') ? 'text-red-500' : 'text-gray-400')}`}>
+                                            {saveStatus === '自動保存完了' && <span className="flex items-center gap-1"><SaveIcon size={12}/> 保存しました</span>}
+                                            {saveStatus === '変更中...' && '変更中...'}
+                                            {saveStatus === '初期化完了' && '初期化しました'}
+                                            {saveStatus.includes('失敗') && saveStatus}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">学校名</label><input type="text" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500" /></div>
+                                        <div className="col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">学校住所</label><input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">担任名</label><input type="text" value={teacherName} onChange={(e) => setTeacherName(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">交付日</label><input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">番号接頭辞</label><input type="text" value={licenseNumberPrefix} onChange={(e) => setLicenseNumberPrefix(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500" /></div>
+                                        <div className="col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">写真下部テキスト（発行元）</label><textarea value={gradeLabel} onChange={(e) => setGradeLabel(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500 h-16" placeholder="改行可能です" /></div>
+                                    </div>
+                                </div>
+
+                                {/* 免許証設定 (New) */}
+                                <div className="bg-white p-6 rounded-xl shadow-md border border-orange-200">
+                                    <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-orange-600"><IdCardIcon size={20} /> カードの文言設定</h2>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">免許証の名前</label>
+                                            <input type="text" value={licenseTitle} onChange={(e) => setLicenseTitle(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-orange-500" placeholder="〇〇免許証" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">有効期限</label>
+                                            <input type="text" value={validityText} onChange={(e) => setValidityText(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-orange-500" placeholder="〇〇の間有効" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">免許の条件等（上段）</label>
+                                            <input type="text" value={condition1} onChange={(e) => setCondition1(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-orange-500" placeholder="〇〇ができる" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">免許の条件等（下段）</label>
+                                            <input type="text" value={condition2} onChange={(e) => setCondition2(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-orange-500" placeholder="〇〇ができる" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">種類（5つ） <span className="text-xs text-gray-400 font-normal">※改行で上下に分割</span></label>
+                                            <div className="grid grid-cols-5 gap-2">
+                                                {categories.map((cat, i) => (
+                                                    <textarea key={i} value={cat} onChange={(e) => handleCategoryChange(i, e.target.value)} className="w-full p-1 border border-gray-300 rounded outline-none focus:border-orange-500 text-xs h-12 text-center resize-none" />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 右: 名簿入力 & Preview Link */}
+                            <div className="flex flex-col gap-6">
+                                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 flex flex-col flex-1">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h2 className="text-xl font-bold flex items-center gap-2 text-green-600"><UsersIcon size={20} /> 児童名簿の入力</h2>
+                                        <div className="flex gap-1">
+                                            <button onClick={handleResetList} type="button" className={`flex items-center gap-1 text-xs border px-2 py-1 rounded transition-colors ${isResetConfirming ? "bg-red-600 text-white border-red-700 font-bold animate-pulse" : "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"}`}><RefreshCwIcon size={14} /> {isResetConfirming ? "本当に初期化？" : "初期化"}</button>
+                                            <button onClick={triggerFileUpload} type="button" className="flex items-center gap-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 px-2 py-1 rounded transition-colors"><UploadIcon size={14} /> 名簿ファイル読込</button>
+                                        </div>
+                                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv,.txt" className="hidden" />
+                                    </div>
+                                    <div className="text-xs text-gray-500 mb-2 leading-relaxed">入力形式：氏名, 生年月日, 番号 (カンマまたはタブ区切り)<br/><span className="text-gray-400">入力例：山田 太郎, 2016-04-01, 2101</span></div>
+                                    <textarea className="flex-1 w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm resize-none min-h-[200px]" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={PLACEHOLDER_TEXT} />
+                                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center text-sm text-gray-600">
+                                        <span>現在の登録児童数: {students.length}名</span>
+                                        <button type="button" onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-colors text-lg"><PrinterIcon size={24} /> 印刷プレビュー</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 下段: 写真登録・確認エリア */}
+                        <div className="bg-gray-200 p-8 rounded-xl border border-gray-300">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-gray-700 flex items-center gap-2"><ImageIcon size={20}/> 仕上がり確認・写真登録</h3>
+                                <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full">顔写真の画像ファイルを枠内にドラッグ＆ドロップすると登録できます</span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full mx-auto bg-white p-8 shadow-inner rounded-lg origin-top font-rounded justify-items-center">
+                                {students.map((student) => (
+                                    <LicenseCard 
+                                        key={student.id}
+                                        student={student}
+                                        schoolName={schoolName}
+                                        address={address}
+                                        teacherName={teacherName}
+                                        issueDate={formatDateJP(issueDate)}
+                                        prefix={licenseNumberPrefix}
+                                        gradeLabel={gradeLabel}
+                                        formattedDOB={formatDOB(student.dob)}
+                                        photo={photos[student.id]}
+                                        onPhotoDrop={handlePhotoDrop}
+                                        onPhotoRemove={() => handlePhotoRemove(student.id)}
+                                        licenseTitle={licenseTitle}
+                                        validityText={validityText}
+                                        condition1={condition1}
+                                        condition2={condition2}
+                                        categories={categories}
+                                    />
+                                ))}
+                                {students.length === 0 && (
+                                    <div className="col-span-full text-center py-20 text-gray-400 border-2 border-dashed border-gray-300 rounded-lg w-full">上の名簿入力欄にデータを入力してください<br/><span className="text-sm mt-2 block opacity-75">入力例：山田 太郎, 2016-04-01, 2101</span></div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Print Data */}
+                    <div id="print-area" className="hidden">
+                        {students.map((student) => (
+                            <div key={student.id} className="license-card">
+                                <LicenseCard 
+                                    student={student}
+                                    schoolName={schoolName}
+                                    address={address}
+                                    teacherName={teacherName}
+                                    issueDate={formatDateJP(issueDate)}
+                                    prefix={licenseNumberPrefix}
+                                    gradeLabel={gradeLabel}
+                                    formattedDOB={formatDOB(student.dob)}
+                                    photo={photos[student.id]}
+                                    licenseTitle={licenseTitle}
+                                    validityText={validityText}
+                                    condition1={condition1}
+                                    condition2={condition2}
+                                    categories={categories}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<KukuLicenseApp />);
+    </script>
+</body>
+</html>
