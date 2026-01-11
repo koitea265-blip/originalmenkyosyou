@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>九九免許証ジェネレーター</title>
+    <title>オリジナル免許証ジェネレーター</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -15,23 +15,28 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts (Rounded M+) -->
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
 
     <style>
         body { font-family: 'M PLUS Rounded 1c', sans-serif; }
+        .font-zen { font-family: 'Zen Maru Gothic', sans-serif; }
+        .font-rounded { font-family: 'M PLUS Rounded 1c', sans-serif; }
+        
         /* 印刷時の設定 */
         @media print {
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body { 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
             .no-print { display: none !important; }
-            @page { size: A4; margin: 10mm; }
-            .license-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 0; }
+            @page { 
+                size: A4; 
+                margin: 10mm; 
+            }
+            /* 印刷時はシャドウを消してインク節約＆綺麗に見せる */
+            .license-card-shadow { box-shadow: none !important; border: 1px solid #ccc !important; }
         }
-        /* スクロールバーのカスタマイズ */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -40,7 +45,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
 
-        // --- アイコンコンポーネント ---
+        // --- アイコンコンポーネント (Lucide Icons) ---
         const IconWrapper = ({ children, size = 24, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                 {children}
@@ -49,8 +54,6 @@
         const PrinterIcon = (props) => <IconWrapper {...props}><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></IconWrapper>;
         const UsersIcon = (props) => <IconWrapper {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></IconWrapper>;
         const SettingsIcon = (props) => <IconWrapper {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></IconWrapper>;
-        const UserPlusIcon = (props) => <IconWrapper {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></IconWrapper>;
-        const XIcon = (props) => <IconWrapper {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconWrapper>;
         const UploadIcon = (props) => <IconWrapper {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></IconWrapper>;
         const RefreshCwIcon = (props) => <IconWrapper {...props}><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></IconWrapper>;
         const ImageIcon = (props) => <IconWrapper {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></IconWrapper>;
@@ -60,13 +63,17 @@
         const CropIcon = (props) => <IconWrapper {...props}><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"></path><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"></path></IconWrapper>;
         const CheckIcon = (props) => <IconWrapper {...props}><polyline points="20 6 9 17 4 12"></polyline></IconWrapper>;
         const IdCardIcon = (props) => <IconWrapper {...props}><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="9" cy="10" r="2"></circle><line x1="15" y1="8" x2="17" y2="8"></line><line x1="15" y1="12" x2="17" y2="12"></line><path d="M7 16h4"></path></IconWrapper>;
+        const CameraIcon = (props) => <IconWrapper {...props}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></IconWrapper>;
+        const TrashIcon = (props) => <IconWrapper {...props}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></IconWrapper>;
+        const X = (props) => <IconWrapper {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconWrapper>;
+        const UserPlus = (props) => <IconWrapper {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></IconWrapper>;
+        const HelpCircleIcon = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></IconWrapper>;
 
-
-        // --- 初期データ (空にする) ---
+        // --- 初期データ ---
         const INITIAL_STUDENTS_TEXT = "";
         const PLACEHOLDER_TEXT = `(例)\n山田 太郎, 2016-04-01, 2101\n鈴木 花子, 2016-05-15, 2102\n佐藤 健太, 2016/06/20, 2103`;
 
-        // --- 画像リサイズ関数 ---
+        // --- 画像処理ユーティリティ ---
         const resizeImage = (dataUrl, maxWidth = 300) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -85,7 +92,6 @@
             });
         };
 
-        // --- ローカルストレージからデータを同期的に読み込む関数 ---
         const loadSavedData = () => {
             try {
                 const data = localStorage.getItem('kukuLicenseData');
@@ -96,16 +102,15 @@
             }
         };
 
-        // --- 画像トリミングコンポーネント ---
+        // --- コンポーネント: 画像トリミング ---
         const ImageCropper = ({ src, onComplete, onCancel }) => {
-            const canvasRef = useRef(null);
             const imgRef = useRef(null);
             const [scale, setScale] = useState(1);
             const [position, setPosition] = useState({ x: 0, y: 0 });
             const [isDragging, setIsDragging] = useState(false);
             const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-            const ASPECT_RATIO = 20 / 24; // 免許証写真のアスペクト比
+            const ASPECT_RATIO = 20 / 24; // 写真比率 (20mm / 24mm)
             const CROP_WIDTH = 200;
             const CROP_HEIGHT = CROP_WIDTH / ASPECT_RATIO;
 
@@ -113,37 +118,24 @@
                 setIsDragging(true);
                 setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
             };
-
             const handleMouseMove = (e) => {
                 if (!isDragging) return;
-                setPosition({
-                    x: e.clientX - dragStart.x,
-                    y: e.clientY - dragStart.y
-                });
+                setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
             };
-
-            const handleMouseUp = () => {
-                setIsDragging(false);
-            };
+            const handleMouseUp = () => setIsDragging(false);
 
             const handleComplete = () => {
                 const canvas = document.createElement('canvas');
                 canvas.width = CROP_WIDTH;
                 canvas.height = CROP_HEIGHT;
                 const ctx = canvas.getContext('2d');
-
                 if (imgRef.current) {
                     const img = imgRef.current;
-                    const centerX = CROP_WIDTH / 2;
-                    const centerY = CROP_HEIGHT / 2;
-                    
                     ctx.fillStyle = "#FFFFFF";
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    
-                    ctx.translate(centerX + position.x, centerY + position.y);
+                    ctx.translate(CROP_WIDTH / 2 + position.x, CROP_HEIGHT / 2 + position.y);
                     ctx.scale(scale, scale);
                     ctx.drawImage(img, -img.width / 2, -img.height / 2);
-                    
                     onComplete(canvas.toDataURL('image/jpeg', 0.9));
                 }
             };
@@ -151,57 +143,237 @@
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
                     <div className="bg-white p-4 rounded-xl shadow-2xl w-full max-w-md flex flex-col items-center">
-                        <h3 className="text-lg font-bold mb-4 text-gray-700 flex items-center gap-2">
-                            <CropIcon size={20}/> 写真の調整
-                        </h3>
-                        
-                        <div className="relative overflow-hidden bg-gray-100 mb-4 border-2 border-blue-500 rounded cursor-move"
-                             style={{ width: CROP_WIDTH, height: CROP_HEIGHT }}
-                             onMouseDown={handleMouseDown}>
-                            <img 
-                                ref={imgRef}
-                                src={src} 
-                                alt="Crop target" 
-                                className="absolute max-w-none origin-center select-none pointer-events-none"
-                                style={{ 
-                                    transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                                    left: '50%',
-                                    top: '50%'
-                                }}
-                            />
-                            {/* グリッド線 */}
-                            <div className="absolute inset-0 pointer-events-none opacity-30">
-                                <div className="w-full h-1/3 border-b border-white/50 absolute top-0"></div>
-                                <div className="w-full h-2/3 border-b border-white/50 absolute top-0"></div>
-                                <div className="h-full w-1/3 border-r border-white/50 absolute left-0"></div>
-                                <div className="h-full w-2/3 border-r border-white/50 absolute left-0"></div>
-                            </div>
+                        <h3 className="text-lg font-bold mb-4 text-gray-700 flex items-center gap-2"><CropIcon size={20}/> 写真の調整</h3>
+                        <div className="relative overflow-hidden bg-gray-100 mb-4 border-2 border-blue-500 rounded cursor-move" style={{ width: CROP_WIDTH, height: CROP_HEIGHT }} onMouseDown={handleMouseDown}>
+                            <img ref={imgRef} src={src} alt="Crop target" className="absolute max-w-none origin-center select-none pointer-events-none" style={{ transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${scale})`, left: '50%', top: '50%' }} />
+                            <div className="absolute inset-0 pointer-events-none opacity-30 border border-white/50"></div>
                         </div>
-
                         <div className="w-full px-4 mb-6">
                             <label className="block text-xs text-gray-500 mb-1">拡大・縮小</label>
-                            <input 
-                                type="range" 
-                                min="0.1" 
-                                max="3" 
-                                step="0.05" 
-                                value={scale} 
-                                onChange={(e) => setScale(parseFloat(e.target.value))}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                            />
+                            <input type="range" min="0.1" max="3" step="0.05" value={scale} onChange={(e) => setScale(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
                         </div>
-
                         <div className="flex gap-3 w-full">
-                            <button onClick={onCancel} className="flex-1 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold transition-colors">
-                                キャンセル
-                            </button>
-                            <button onClick={handleComplete} className="flex-1 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors">
-                                <CheckIcon size={16}/> 完了
+                            <button onClick={onCancel} className="flex-1 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold">キャンセル</button>
+                            <button onClick={handleComplete} className="flex-1 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-bold flex items-center justify-center gap-2"><CheckIcon size={16}/> 完了</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- ヘルプモーダル ---
+        const HelpModal = ({ isOpen, onClose }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+                    <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
+                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                            <X size={24} />
+                        </button>
+                        <h3 className="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                            <HelpCircleIcon size={24} className="text-blue-500" />
+                            保存と読込について
+                        </h3>
+                        <div className="space-y-4 text-sm text-gray-600 leading-relaxed">
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                <h4 className="font-bold text-blue-700 mb-2 flex items-center gap-2">
+                                    <DownloadIcon size={16} /> データを保存
+                                </h4>
+                                <p>
+                                    現在入力されている「基本情報」「免許証の文言」「児童名簿」「写真データ」をまとめて、
+                                    <span className="font-bold text-gray-800">.json 形式のファイル</span>としてパソコンに保存します。
+                                    <br/>
+                                    後で作業を再開したい場合や、別のパソコンへデータを移動する場合にご利用ください。
+                                </p>
+                            </div>
+                            <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+                                <h4 className="font-bold text-green-700 mb-2 flex items-center gap-2">
+                                    <FileUpIcon size={16} /> データを読込
+                                </h4>
+                                <p>
+                                    以前にこのアプリで保存した <span className="font-bold text-gray-800">.json ファイル</span> を読み込みます。
+                                    <br/>
+                                    <span className="text-red-500 font-bold">※注意：</span>
+                                    読み込むと、現在画面に入力されている内容はすべて上書きされます。
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mt-6 flex justify-end">
+                            <button onClick={onClose} className="bg-gray-800 text-white px-6 py-2 rounded-lg hover:bg-gray-700 font-bold transition-colors">
+                                閉じる
                             </button>
                         </div>
-                        <p className="text-[10px] text-gray-400 mt-3 text-center">
-                            画像をドラッグして位置を調整できます
-                        </p>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- License Card Component ---
+        const LicenseCard = ({ 
+            student, schoolName, address, teacherName, issueDate, prefix, gradeLabel, formattedDOB, photo, onPhotoUpdate,
+            // 追加Props (for dynamic texts)
+            licenseTitle, validityText, condition1, condition2, categories
+        }) => {
+            const [isDragOver, setIsDragOver] = useState(false);
+            const handleDragOver = (e) => { e.preventDefault(); setIsDragOver(true); };
+            const handleDragLeave = () => { setIsDragOver(false); };
+            const handleDrop = (e) => {
+                e.preventDefault(); setIsDragOver(false);
+                if (!onPhotoUpdate) return;
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => { if (ev.target?.result) onPhotoUpdate(ev.target.result); };
+                    reader.readAsDataURL(file);
+                }
+            };
+            const removePhoto = (e) => { e.stopPropagation(); if (onPhotoUpdate) onPhotoUpdate(null); };
+
+            const LEFT_BLOCK_WIDTH = "67%";
+            const STD_TEXT_SIZE = "text-[8pt] leading-[1.1] tracking-tighter pl-1"; 
+            const LABEL_SIZE = "text-[8pt] leading-none tracking-tighter"; 
+            const LABEL_CELL_STYLE = "w-10 text-center border-r border-gray-400 mr-1 flex items-center justify-center font-bold text-gray-600 whitespace-nowrap h-full bg-gray-50";
+            const ROW_HEIGHT = "h-[5mm]";
+
+            const getVerticalColumns = (text) => {
+                const cleanText = text.replace(/[\s\n]/g, '');
+                const len = cleanText.length;
+                const colLen = Math.ceil(len / 3);
+                return [cleanText.slice(0, colLen), cleanText.slice(colLen, colLen * 2), cleanText.slice(colLen * 2)]; 
+            };
+            const sealColumns = getVerticalColumns(schoolName);
+
+            const parsedCategories = (categories || []).map(cat => {
+                const parts = cat.split('\n');
+                return { l: parts[0] || '', s: parts[1] || '' };
+            });
+
+            return (
+                <div className="relative w-[85.6mm] h-[54mm] rounded-[2mm] overflow-hidden flex flex-col shadow-md box-border select-none font-rounded text-gray-900 border border-gray-400 bg-white p-[2mm]">
+                    <div className={`flex items-stretch border border-gray-400 bg-[#fdfdfd] rounded-sm ${ROW_HEIGHT} mb-[0.5mm] px-0 w-full overflow-hidden`}>
+                        <div className="flex-1 flex items-center overflow-hidden h-full">
+                                <div className={LABEL_CELL_STYLE}><span className={LABEL_SIZE}>氏名</span></div>
+                                <span className={`${STD_TEXT_SIZE} font-bold text-gray-900 flex-1 whitespace-nowrap overflow-hidden text-ellipsis self-center`}>{student.name}</span>
+                        </div>
+                        <div className="flex items-center justify-end pl-2 border-l border-dotted border-gray-400 h-[80%] my-auto shrink-0 pr-1">
+                                <span className={`${STD_TEXT_SIZE} font-bold`}>{formattedDOB}</span>
+                        </div>
+                    </div>
+                    <div className="border border-gray-400 border-b rounded-t-sm flex flex-col justify-center bg-[#fdfdfd] w-full">
+                        <div className={`flex items-stretch border-b border-dotted border-gray-300 px-0 ${ROW_HEIGHT} overflow-hidden`}>
+                                <div className={LABEL_CELL_STYLE}><span className={LABEL_SIZE}>学校</span></div>
+                                <span className={`${STD_TEXT_SIZE} font-medium whitespace-nowrap overflow-hidden self-center`}>{schoolName}</span>
+                        </div>
+                        <div className={`flex items-stretch px-0 ${ROW_HEIGHT} overflow-hidden`}>
+                                <div className={LABEL_CELL_STYLE}><span className={LABEL_SIZE}>住所</span></div>
+                                <span className={`${STD_TEXT_SIZE} font-medium whitespace-nowrap overflow-hidden self-center`}>{address}</span>
+                        </div>
+                    </div>
+                    <div className="flex-1 flex gap-[1px] pt-0 overflow-hidden">
+                        <div style={{ width: LEFT_BLOCK_WIDTH }} className="flex flex-col gap-[1px] shrink-0">
+                            <div className="w-full bg-[#cfae46] h-[6mm] flex items-center px-1 relative border border-[#b09030] border-t-0">
+                                <div className="w-full flex justify-between items-center px-1">
+                                    {validityText.split('').map((c, i) => (<span key={i} className="text-[10pt] font-bold text-black leading-none transform scale-y-105">{c}</span>))}
+                                </div>
+                            </div>
+                            <div className="w-full border border-gray-600 rounded-sm bg-[#fcfcfc] px-0 py-[1px] flex items-stretch flex-1 mb-[0.5mm] overflow-hidden min-h-[6mm]">
+                                <div className={LABEL_CELL_STYLE}>
+                                    <div className="flex flex-col items-center leading-none"><span className="text-[6pt] leading-none tracking-tighter">免許の</span><span className="text-[6pt] leading-none tracking-tighter">条件等</span></div>
+                                </div>
+                                <div className="flex-1 flex flex-col justify-center relative overflow-hidden pl-1">
+                                    <div className="text-[6pt] leading-[1.1] tracking-tighter font-bold text-gray-900 whitespace-nowrap">{condition1}</div>
+                                    <div className="text-[6pt] leading-[1.1] tracking-tighter font-bold text-gray-900 whitespace-nowrap">{condition2}</div>
+                                </div>
+                            </div>
+                            <div className="w-full flex justify-start mb-[1px] shrink-0 pl-2">
+                                <div className="border border-red-600 rounded-[3px] px-1 bg-white h-[5mm] flex items-center justify-center">
+                                    <span className="text-[8pt] font-bold text-red-600 leading-none">優 秀</span>
+                                </div>
+                            </div>
+                            <div className={`w-full border border-gray-400 border-b-0 bg-gray-50 flex items-stretch px-0 ${ROW_HEIGHT} overflow-hidden shrink-0`}>
+                                <div className={LABEL_CELL_STYLE}><span className={LABEL_SIZE}>番号</span></div>
+                                <span className={`${STD_TEXT_SIZE} font-bold text-gray-800 self-center`}>{prefix} {student.classNum} {student.studentNum}</span>
+                            </div>
+                            <div className="flex gap-[1px] items-stretch shrink-0">
+                                <div className="flex-[4] flex flex-col">
+                                    <div className={`border border-gray-400 border-b-0 bg-gray-50 flex items-stretch px-0 overflow-hidden ${ROW_HEIGHT}`}>
+                                        <div className={LABEL_CELL_STYLE}><span className={LABEL_SIZE}>交付</span></div>
+                                        <span className="text-[7pt] leading-none tracking-tighter font-bold text-gray-800 self-center whitespace-nowrap overflow-hidden pl-1">{issueDate}</span>
+                                    </div>
+                                    <div className={`border border-gray-400 bg-gray-50 flex items-stretch px-0 overflow-hidden ${ROW_HEIGHT}`}>
+                                        <div className={LABEL_CELL_STYLE}><span className={LABEL_SIZE}>担任</span></div>
+                                        <div className="flex-1 flex items-center border-b border-dotted border-gray-400 mr-1 h-full">
+                                            <span className={`${STD_TEXT_SIZE} font-bold whitespace-nowrap`}>{teacherName}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex-[2] border border-gray-600 bg-white flex divide-x divide-gray-400">
+                                    <div className="w-[5mm] bg-gray-100 flex flex-col items-center justify-center font-bold leading-none">
+                                        <span className="text-[8pt] scale-75 origin-center">種</span><span className="text-[8pt] scale-75 origin-center">類</span>
+                                    </div>
+                                    {parsedCategories.map((x, i) => (
+                                        <div key={i} className="flex-1 flex flex-col items-center justify-center relative py-[0.5px] bg-orange-200">
+                                            <div className="flex flex-col items-center justify-center h-full leading-none">
+                                                <div className="text-[7pt] font-bold text-gray-800 leading-[0.8] mb-[0.5px] flex flex-col items-center">{x.l.split('').map((c,k)=><span key={k} className={c==='.'?'my-[-2px]':''}>{c}</span>)}</div>
+                                                <div className="text-[5pt] text-gray-600 leading-none flex flex-col items-center scale-75 gap-0.5"><span>{x.s[0]}</span><span>{x.s[1]}</span></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex-1 flex gap-1 pl-1 overflow-hidden">
+                            <div className="flex flex-col items-center justify-center h-full w-[8mm]">
+                                <div className="text-blue-700 font-bold flex flex-col items-center justify-center h-full text-[10pt] leading-tight tracking-widest">
+                                    {licenseTitle.split('').map((c, i) => <span key={i} className="my-[2px]">{c}</span>)}
+                                </div>
+                            </div>
+                            <div className="flex-1 flex flex-col items-center justify-start pt-1 relative">
+                                <div 
+                                    className={`w-[20mm] h-[24mm] border border-gray-400 flex flex-col items-center justify-center mb-1 shadow-inner relative overflow-hidden bg-white z-10 transition-colors ${isDragOver ? 'bg-blue-50 border-blue-500' : 'bg-gray-100'}`}
+                                    onDragOver={onPhotoUpdate ? handleDragOver : undefined}
+                                    onDragLeave={onPhotoUpdate ? handleDragLeave : undefined}
+                                    onDrop={onPhotoUpdate ? handleDrop : undefined}
+                                    onClick={onPhotoUpdate ? () => document.getElementById(`file-${student.id}`).click() : undefined}
+                                >
+                                    {photo ? (
+                                        <div className="relative w-full h-full group">
+                                            <img src={photo} alt="Student" className="w-full h-full object-cover" />
+                                            {onPhotoUpdate && (
+                                                <div className="absolute top-0 right-0 p-0.5 bg-white/80 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" onClick={removePhoto}>
+                                                    <X size={12} className="text-red-500" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <UserPlus size={32} strokeWidth={1.5} className="text-gray-400" />
+                                            <span className="text-[8pt] text-gray-400 absolute bottom-1">写真</span>
+                                            {onPhotoUpdate && <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-black/5 text-[6pt] text-center p-1 text-gray-600">Drag & Drop</div>}
+                                        </>
+                                    )}
+                                    <input type="file" id={`file-${student.id}`} className="hidden" accept="image/*" onChange={(e) => {
+                                        if(e.target.files[0]) {
+                                            const reader = new FileReader();
+                                            reader.onload = (ev) => { if (ev.target?.result && onPhotoUpdate) onPhotoUpdate(ev.target.result); };
+                                            reader.readAsDataURL(e.target.files[0]);
+                                        }
+                                    }} />
+                                </div>
+                                <div className="text-[8pt] font-bold text-center leading-tight whitespace-pre-wrap text-gray-800 relative z-20">{gradeLabel}</div>
+                                <div className="absolute bottom-[2px] right-[2px] z-30 opacity-80 mix-blend-multiply pointer-events-none transform rotate-0">
+                                    <div className="border-[0.5px] border-red-600 w-[5.5mm] h-[5.5mm] flex flex-row-reverse items-stretch bg-white/20 overflow-hidden p-0">
+                                        {sealColumns.map((col, idx) => (
+                                            <div key={idx} className="flex flex-col items-center justify-center h-full flex-1 leading-none">
+                                                {col.split('').map((c, k) => (
+                                                    <span key={k} className="text-[4.5pt] font-serif font-bold text-red-600 leading-none transform scale-x-125 scale-y-110 origin-center block -my-[0.5px]">{c}</span>
+                                                ))}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             );
@@ -244,6 +416,7 @@
             const [saveStatus, setSaveStatus] = useState('');
             const [croppingData, setCroppingData] = useState(null);
             const [isResetConfirming, setIsResetConfirming] = useState(false);
+            const [isHelpOpen, setIsHelpOpen] = useState(false);
 
             const fileInputRef = useRef(null);
             const jsonInputRef = useRef(null);
@@ -261,7 +434,6 @@
                     const dataToSave = {
                         schoolName, address, teacherName, issueDate, 
                         licenseNumberPrefix, gradeLabel, inputText, photos,
-                        // 新しい項目も保存
                         licenseTitle, validityText, condition1, condition2, categories
                     };
                     try {
@@ -269,7 +441,7 @@
                         setSaveStatus('自動保存完了');
                     } catch (e) {
                         console.error("Save failed", e);
-                        setSaveStatus('自動保存失敗 (容量?)');
+                        setSaveStatus('自動保存失敗 (容量オーバー?)');
                     }
                     setTimeout(() => setSaveStatus(''), 3000);
                 }, 1000);
@@ -280,7 +452,7 @@
                 const lines = inputText.split('\n');
                 const parsed = lines.map((line, index) => {
                     const parts = line.split(/[,\t]/).map(s => s.trim());
-                    if (parts.length < 2) return null;
+                    if (parts.length < 1 || !parts[0]) return null;
                     let dob = parts[1] || '';
                     dob = dob.replace(/\//g, '-');
                     return {
@@ -288,7 +460,7 @@
                         name: parts[0] || '',
                         dob: dob,
                         classNum: '', 
-                        studentNum: parts[2] || '',
+                        studentNum: parts[2] || (index + 1).toString().padStart(2, '0'),
                     };
                 }).filter(s => s !== null);
                 setStudents(parsed);
@@ -324,13 +496,11 @@
                         if (loadedData.gradeLabel !== undefined) setGradeLabel(loadedData.gradeLabel);
                         if (loadedData.inputText !== undefined) setInputText(loadedData.inputText);
                         if (loadedData.photos !== undefined) setPhotos(loadedData.photos);
-                        // 新項目の読み込み
                         if (loadedData.licenseTitle !== undefined) setLicenseTitle(loadedData.licenseTitle);
                         if (loadedData.validityText !== undefined) setValidityText(loadedData.validityText);
                         if (loadedData.condition1 !== undefined) setCondition1(loadedData.condition1);
                         if (loadedData.condition2 !== undefined) setCondition2(loadedData.condition2);
                         if (loadedData.categories !== undefined) setCategories(loadedData.categories);
-                        
                         alert("データを読み込みました！");
                     } catch (err) {
                         alert("ファイルの読み込みに失敗しました。");
@@ -363,12 +533,6 @@
                 if (isResetConfirming) {
                     setInputText(INITIAL_STUDENTS_TEXT);
                     setPhotos({});
-                    const dataToSave = { 
-                        schoolName, address, teacherName, issueDate, licenseNumberPrefix, gradeLabel, 
-                        inputText: INITIAL_STUDENTS_TEXT, photos: {},
-                        licenseTitle, validityText, condition1, condition2, categories
-                    };
-                    try { localStorage.setItem('kukuLicenseData', JSON.stringify(dataToSave)); setSaveStatus('初期化完了'); setTimeout(() => setSaveStatus(''), 3000); } catch(err) { console.error(err); }
                     setIsResetConfirming(false);
                 } else {
                     setIsResetConfirming(true);
@@ -376,8 +540,6 @@
                 }
             };
             const triggerFileUpload = () => { fileInputRef.current?.click(); };
-
-            // カテゴリ（種類）の変更ハンドラ
             const handleCategoryChange = (index, value) => {
                 const newCategories = [...categories];
                 newCategories[index] = value;
@@ -385,27 +547,9 @@
             };
 
             const handlePrint = () => {
-                const printContent = document.getElementById('print-area')?.innerHTML;
-                if (!printContent) return;
-                const printWindow = window.open('', '_blank', 'width=1000,height=800');
-                if (!printWindow) { alert("ポップアップがブロックされました。"); return; }
-                printWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                        <head><title>${licenseTitle} - 印刷プレビュー</title>
-                        <script src="https://cdn.tailwindcss.com"></` + `script>
-                        <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
-                        <style>body { font-family: 'M PLUS Rounded 1c', sans-serif; -webkit-print-color-adjust: exact; } @page { size: A4; margin: 10mm; } .license-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 1rem; }</style>
-                        </head>
-                        <body class="bg-gray-100 p-8 print:p-0 print:bg-white">
-                        <div class="text-center mb-8 print:hidden"><h1 class="text-2xl font-bold mb-2">印刷プレビュー</h1><button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold shadow hover:bg-blue-700">印刷を実行する</button></div>
-                        <div class="grid grid-cols-2 gap-4 max-w-[210mm] mx-auto print:max-w-none print:w-full">${printContent}</div>
-                        </body>
-                    </html>
-                `);
-                printWindow.document.close();
-                setTimeout(() => { printWindow.focus(); }, 500);
+                window.print();
             };
+
             const formatDateJP = (dateStr) => {
                 if (!dateStr) return '';
                 try {
@@ -424,134 +568,159 @@
             };
 
             return (
-                <div className="p-6 bg-gray-100 min-h-screen">
+                <div className="p-4 md:p-8 bg-gray-50 min-h-screen font-sans print:p-0 print:bg-white">
                     {croppingData && <ImageCropper src={croppingData.src} onComplete={handleCropComplete} onCancel={() => setCroppingData(null)} />}
-                    <div className="no-print max-w-full mx-auto flex flex-col gap-6">
-                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 flex flex-wrap gap-2 items-center justify-between">
-                            <span className="text-sm text-blue-800 font-bold flex items-center gap-2"><SaveIcon size={16}/> データの保存・読込</span>
+                    <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+                    
+                    <div className="no-print max-w-6xl mx-auto flex flex-col gap-6">
+                        <header className="flex justify-between items-center mb-4">
+                            <div>
+                                <h1 className="text-3xl font-extrabold text-gray-800 flex items-center gap-2">
+                                    <IdCardIcon size={32} className="text-yellow-500" />
+                                    オリジナル免許証ジェネレーター
+                                </h1>
+                                <p className="text-gray-500 text-sm mt-1">クラス全員分の免許証をブラウザだけで簡単作成</p>
+                            </div>
                             <div className="flex gap-2">
-                                <button onClick={handleExportData} type="button" className="bg-white hover:bg-blue-100 text-blue-700 border border-blue-300 px-3 py-1.5 rounded text-sm flex items-center gap-1 transition-colors"><DownloadIcon size={14}/> データを保存</button>
-                                <button onClick={triggerJsonUpload} type="button" className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1 transition-colors"><FileUpIcon size={14}/> データを読込</button>
+                                <button onClick={handleExportData} className="bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 px-3 py-2 rounded-lg text-sm flex items-center gap-1 transition shadow-sm"><DownloadIcon size={16}/> 保存</button>
+                                <button onClick={triggerJsonUpload} className="bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 px-3 py-2 rounded-lg text-sm flex items-center gap-1 transition shadow-sm"><FileUpIcon size={16}/> 読込</button>
+                                <button onClick={() => setIsHelpOpen(true)} className="bg-white hover:bg-gray-100 text-gray-500 border border-gray-300 px-3 py-2 rounded-lg text-sm flex items-center gap-1 transition shadow-sm" title="保存と読込について">
+                                    <HelpCircleIcon size={20}/>
+                                </button>
                                 <input type="file" ref={jsonInputRef} onChange={handleImportData} accept=".json" className="hidden" />
                             </div>
-                        </div>
+                        </header>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* 左カラム */}
-                            <div className="space-y-6">
-                                {/* 基本設定 */}
-                                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h2 className="text-xl font-bold flex items-center gap-2 text-blue-600"><SettingsIcon size={20} /> 基本情報の設定</h2>
-                                        <span className={`text-xs font-bold transition-colors duration-300 ${saveStatus === '自動保存完了' ? 'text-green-600' : (saveStatus.includes('失敗') ? 'text-red-500' : 'text-gray-400')}`}>
-                                            {saveStatus === '自動保存完了' && <span className="flex items-center gap-1"><SaveIcon size={12}/> 保存しました</span>}
-                                            {saveStatus === '変更中...' && '変更中...'}
-                                            {saveStatus === '初期化完了' && '初期化しました'}
-                                            {saveStatus.includes('失敗') && saveStatus}
-                                        </span>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">学校名</label><input type="text" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500" /></div>
-                                        <div className="col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">学校住所</label><input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500" /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">担任名</label><input type="text" value={teacherName} onChange={(e) => setTeacherName(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500" /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">交付日</label><input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500" /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">番号接頭辞</label><input type="text" value={licenseNumberPrefix} onChange={(e) => setLicenseNumberPrefix(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500" /></div>
-                                        <div className="col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">写真下部テキスト（発行元）</label><textarea value={gradeLabel} onChange={(e) => setGradeLabel(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-blue-500 h-16" placeholder="改行可能です" /></div>
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            {/* 左カラム: 設定エリア */}
+                            <div className="lg:col-span-5 space-y-6">
+                                <div className="bg-blue-50 p-5 rounded-xl shadow-sm border border-blue-200">
+                                    <h2 className="text-lg font-bold flex items-center gap-2 text-blue-600 mb-4 border-b border-blue-200 pb-2"><SettingsIcon size={20} /> 基本情報</h2>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div><label className="text-xs font-bold text-gray-500">学校名</label><input type="text" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-400" /></div>
+                                        <div><label className="text-xs font-bold text-gray-500">学校住所</label><input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-400" /></div>
+                                        <div><label className="text-xs font-bold text-gray-500">担任名</label><input type="text" value={teacherName} onChange={(e) => setTeacherName(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-400" /></div>
+                                        <div><label className="text-xs font-bold text-gray-500">交付日</label><input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-400" /></div>
+                                        <div><label className="text-xs font-bold text-gray-500">番号接頭辞</label><input type="text" value={licenseNumberPrefix} onChange={(e) => setLicenseNumberPrefix(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-400" /></div>
                                     </div>
                                 </div>
 
-                                {/* 免許証設定 (New) */}
-                                <div className="bg-white p-6 rounded-xl shadow-md border border-orange-200">
-                                    <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-orange-600"><IdCardIcon size={20} /> カードの文言設定</h2>
-                                    <div className="space-y-4">
+                                <div className="bg-orange-50 p-5 rounded-xl shadow-sm border border-orange-200">
+                                    <h2 className="text-lg font-bold flex items-center gap-2 text-orange-600 mb-4 border-b border-orange-200 pb-2"><IdCardIcon size={20} /> 免許証の文言</h2>
+                                    <div className="space-y-3">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">免許証の名前</label>
-                                            <input type="text" value={licenseTitle} onChange={(e) => setLicenseTitle(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-orange-500" placeholder="〇〇免許証" />
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">タイトル</label>
+                                            <input type="text" value={licenseTitle} onChange={(e) => setLicenseTitle(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-orange-400" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">有効期限</label>
-                                            <input type="text" value={validityText} onChange={(e) => setValidityText(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-orange-500" placeholder="〇〇の間有効" />
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">有効期限</label>
+                                            <input type="text" value={validityText} onChange={(e) => setValidityText(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-orange-400" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">免許の条件等（上段）</label>
-                                            <input type="text" value={condition1} onChange={(e) => setCondition1(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-orange-500" placeholder="〇〇ができる" />
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">条件1 (上段)</label>
+                                            <input type="text" value={condition1} onChange={(e) => setCondition1(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-orange-400" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">免許の条件等（下段）</label>
-                                            <input type="text" value={condition2} onChange={(e) => setCondition2(e.target.value)} className="w-full p-2 border border-gray-300 rounded outline-none focus:border-orange-500" placeholder="〇〇ができる" />
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">条件2 (下段)</label>
+                                            <input type="text" value={condition2} onChange={(e) => setCondition2(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-orange-400" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">種類（5つ） <span className="text-xs text-gray-400 font-normal">※改行で上下に分割</span></label>
-                                            <div className="grid grid-cols-5 gap-2">
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">種類 (5つ・改行で上下)</label>
+                                            <div className="grid grid-cols-5 gap-1">
                                                 {categories.map((cat, i) => (
-                                                    <textarea key={i} value={cat} onChange={(e) => handleCategoryChange(i, e.target.value)} className="w-full p-1 border border-gray-300 rounded outline-none focus:border-orange-500 text-xs h-12 text-center resize-none" />
+                                                    <textarea key={i} value={cat} onChange={(e) => handleCategoryChange(i, e.target.value)} className="w-full p-1 border border-gray-300 rounded text-xs h-12 text-center resize-none leading-tight focus:outline-none focus:border-orange-400" />
                                                 ))}
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 右: 名簿入力 & Preview Link */}
-                            <div className="flex flex-col gap-6">
-                                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 flex flex-col flex-1">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h2 className="text-xl font-bold flex items-center gap-2 text-green-600"><UsersIcon size={20} /> 児童名簿の入力</h2>
-                                        <div className="flex gap-1">
-                                            <button onClick={handleResetList} type="button" className={`flex items-center gap-1 text-xs border px-2 py-1 rounded transition-colors ${isResetConfirming ? "bg-red-600 text-white border-red-700 font-bold animate-pulse" : "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"}`}><RefreshCwIcon size={14} /> {isResetConfirming ? "本当に初期化？" : "初期化"}</button>
-                                            <button onClick={triggerFileUpload} type="button" className="flex items-center gap-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 px-2 py-1 rounded transition-colors"><UploadIcon size={14} /> 名簿ファイル読込</button>
+                                        <div>
+                                             <label className="block text-xs font-bold text-gray-500 mb-1">発行元（写真下）</label>
+                                             <textarea value={gradeLabel} onChange={(e) => setGradeLabel(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm h-16 resize-none focus:outline-none focus:border-orange-400" placeholder="改行可能です" />
                                         </div>
-                                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv,.txt" className="hidden" />
-                                    </div>
-                                    <div className="text-xs text-gray-500 mb-2 leading-relaxed">入力形式：氏名, 生年月日, 番号 (カンマまたはタブ区切り)<br/><span className="text-gray-400">入力例：山田 太郎, 2016-04-01, 2101</span></div>
-                                    <textarea className="flex-1 w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm resize-none min-h-[200px]" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={PLACEHOLDER_TEXT} />
-                                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center text-sm text-gray-600">
-                                        <span>現在の登録児童数: {students.length}名</span>
-                                        <button type="button" onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-colors text-lg"><PrinterIcon size={24} /> 印刷プレビュー</button>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        {/* 下段: 写真登録・確認エリア */}
-                        <div className="bg-gray-200 p-8 rounded-xl border border-gray-300">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-gray-700 flex items-center gap-2"><ImageIcon size={20}/> 仕上がり確認・写真登録</h3>
-                                <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full">顔写真の画像ファイルを枠内にドラッグ＆ドロップすると登録できます</span>
+                                <div className="bg-green-50 p-5 rounded-xl shadow-sm border border-green-200">
+                                    <h2 className="text-lg font-bold flex items-center gap-2 text-green-600 mb-4 border-b border-green-200 pb-2"><UsersIcon size={20} /> 児童名簿</h2>
+                                    
+                                    {/* 説明文エリアを追加 */}
+                                    <div className="bg-white p-3 rounded border border-gray-200 text-xs text-gray-600 mb-3">
+                                        <p className="font-bold text-gray-700 mb-1">【入力形式】 1行に1名ずつ入力</p>
+                                        <div className="font-mono bg-gray-50 p-1 border border-gray-300 rounded mb-1 text-[11px]">
+                                            氏名(TABまたはカンマ)生年月日(TABまたはカンマ)番号
+                                        </div>
+                                        <p className="text-[10px] text-gray-500 mb-2">※日付は 2016-04-01, 2016/04/01 対応</p>
+                                        <p className="leading-relaxed">
+                                            <span className="font-bold text-green-600">Excel・スプレッドシート対応：</span><br/>
+                                            「氏名」「生年月日」「番号」の3列を選択してコピーし、ここに貼り付けると自動で入力できます。
+                                        </p>
+                                    </div>
+
+                                    <div className="flex justify-end items-center mb-2">
+                                        <div className="flex gap-3">
+                                            <button onClick={triggerFileUpload} className="group flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors">
+                                                <UploadIcon size={14} className="text-blue-500 group-hover:text-blue-700"/> CSV読込
+                                            </button>
+                                            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv,.txt" className="hidden" />
+                                            <button onClick={handleResetList} className={`group flex items-center gap-1 text-xs transition-colors ${isResetConfirming ? "text-red-600 font-bold animate-pulse" : "text-gray-500 hover:text-red-600"}`}>
+                                                <RefreshCwIcon size={14} className={isResetConfirming ? "text-red-600" : "text-gray-400 group-hover:text-red-500"}/> {isResetConfirming ? "本当に初期化？" : "初期化"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <textarea className="w-full h-40 p-2 border border-gray-300 rounded text-sm font-mono leading-relaxed focus:outline-none focus:border-green-400" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={PLACEHOLDER_TEXT} />
+                                    <p className="text-right text-xs text-gray-400 mt-1">{students.length}名 登録中</p>
+                                </div>
+                                
+                                <button type="button" onClick={handlePrint} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition transform hover:scale-[1.01]">
+                                    <PrinterIcon size={24} /> 印刷する (A4)
+                                </button>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full mx-auto bg-white p-8 shadow-inner rounded-lg origin-top font-rounded justify-items-center">
-                                {students.map((student) => (
-                                    <LicenseCard 
-                                        key={student.id}
-                                        student={student}
-                                        schoolName={schoolName}
-                                        address={address}
-                                        teacherName={teacherName}
-                                        issueDate={formatDateJP(issueDate)}
-                                        prefix={licenseNumberPrefix}
-                                        gradeLabel={gradeLabel}
-                                        formattedDOB={formatDOB(student.dob)}
-                                        photo={photos[student.id]}
-                                        onPhotoDrop={handlePhotoDrop}
-                                        onPhotoRemove={() => handlePhotoRemove(student.id)}
-                                        licenseTitle={licenseTitle}
-                                        validityText={validityText}
-                                        condition1={condition1}
-                                        condition2={condition2}
-                                        categories={categories}
-                                    />
-                                ))}
-                                {students.length === 0 && (
-                                    <div className="col-span-full text-center py-20 text-gray-400 border-2 border-dashed border-gray-300 rounded-lg w-full">上の名簿入力欄にデータを入力してください<br/><span className="text-sm mt-2 block opacity-75">入力例：山田 太郎, 2016-04-01, 2101</span></div>
-                                )}
+
+                            {/* 右カラム: プレビューエリア */}
+                            <div className="lg:col-span-7 bg-gray-200 p-6 rounded-xl border border-gray-300 shadow-inner overflow-y-auto max-h-[800px]">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-bold text-gray-700 flex items-center gap-2"><ImageIcon size={20}/> 仕上がりプレビュー</h3>
+                                    <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">写真エリアに画像をドロップ</span>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {students.map((student) => (
+                                        <div key={student.id} className="transform scale-90 origin-top-left sm:scale-100">
+                                            <LicenseCard 
+                                                student={student}
+                                                schoolName={schoolName}
+                                                address={address}
+                                                teacherName={teacherName}
+                                                issueDate={formatDateJP(issueDate)}
+                                                prefix={licenseNumberPrefix}
+                                                gradeLabel={gradeLabel}
+                                                formattedDOB={formatDOB(student.dob)}
+                                                photo={photos[student.id]}
+                                                onPhotoUpdate={(data) => {
+                                                    if (data) handlePhotoDrop(student.id, data);
+                                                    else handlePhotoRemove(student.id);
+                                                }}
+                                                licenseTitle={licenseTitle}
+                                                validityText={validityText}
+                                                condition1={condition1}
+                                                condition2={condition2}
+                                                categories={categories}
+                                            />
+                                        </div>
+                                    ))}
+                                    {students.length === 0 && (
+                                        <div className="col-span-2 py-20 text-center text-gray-400 border-2 border-dashed border-gray-300 rounded bg-gray-50">
+                                            名簿データを入力してください
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Print Data */}
-                    <div id="print-area" className="hidden">
+                    {/* 印刷用レイアウト (A4 Grid) */}
+                    <div className="hidden print:grid print:grid-cols-2 print:gap-4 print:w-full max-w-[210mm] mx-auto">
                         {students.map((student) => (
-                            <div key={student.id} className="license-card">
+                            <div key={student.id} className="break-inside-avoid page-break-inside-avoid mb-4">
                                 <LicenseCard 
                                     student={student}
                                     schoolName={schoolName}
@@ -562,6 +731,7 @@
                                     gradeLabel={gradeLabel}
                                     formattedDOB={formatDOB(student.dob)}
                                     photo={photos[student.id]}
+                                    onPhotoUpdate={null}
                                     licenseTitle={licenseTitle}
                                     validityText={validityText}
                                     condition1={condition1}
