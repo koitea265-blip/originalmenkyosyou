@@ -313,9 +313,15 @@
                                     </div>
                                     {parsedCategories.map((x, i) => (
                                         <div key={i} className="flex-1 flex flex-col items-center justify-center relative py-[0.5px] bg-orange-200">
-                                            <div className="flex flex-col items-center justify-center h-full leading-none">
-                                                <div className="text-[7pt] font-bold text-gray-800 leading-[0.8] mb-[0.5px] flex flex-col items-center">{x.l.split('').map((c,k)=><span key={k} className={c==='.'?'my-[-2px]':''}>{c}</span>)}</div>
-                                                <div className="text-[5pt] text-gray-600 leading-none flex flex-col items-center scale-75 gap-0.5"><span>{x.s[0]}</span><span>{x.s[1]}</span></div>
+                                            <div className="flex flex-col items-center justify-center h-full leading-none gap-0.5">
+                                                {/* 上段 */}
+                                                <div className="text-[6pt] text-gray-800 leading-none flex flex-col items-center">
+                                                    {x.l.split('').map((c,k)=><span key={k} className={c==='.'||c==='・'?'my-[-1px]':''}>{c}</span>)}
+                                                </div>
+                                                {/* 下段 */}
+                                                <div className="text-[6pt] text-gray-800 leading-none flex flex-col items-center">
+                                                    {x.s.split('').map((c,k)=><span key={k}>{c}</span>)}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -572,7 +578,7 @@
                     {croppingData && <ImageCropper src={croppingData.src} onComplete={handleCropComplete} onCancel={() => setCroppingData(null)} />}
                     <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
                     
-                    <div className="no-print max-w-6xl mx-auto flex flex-col gap-6">
+                    <div className="no-print max-w-[1400px] mx-auto flex flex-col gap-6">
                         <header className="flex justify-between items-center mb-4">
                             <div>
                                 <h1 className="text-3xl font-extrabold text-gray-800 flex items-center gap-2">
@@ -593,7 +599,7 @@
 
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                             {/* 左カラム: 設定エリア */}
-                            <div className="lg:col-span-5 space-y-6">
+                            <div className="lg:col-span-4 space-y-6">
                                 <div className="bg-blue-50 p-5 rounded-xl shadow-sm border border-blue-200">
                                     <h2 className="text-lg font-bold flex items-center gap-2 text-blue-600 mb-4 border-b border-blue-200 pb-2"><SettingsIcon size={20} /> 基本情報</h2>
                                     <div className="grid grid-cols-1 gap-3">
@@ -670,19 +676,21 @@
                                     <p className="text-right text-xs text-gray-400 mt-1">{students.length}名 登録中</p>
                                 </div>
                                 
-                                <button type="button" onClick={handlePrint} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition transform hover:scale-[1.01]">
-                                    <PrinterIcon size={24} /> 印刷する (A4)
-                                </button>
                             </div>
 
                             {/* 右カラム: プレビューエリア */}
-                            <div className="lg:col-span-7 bg-gray-200 p-6 rounded-xl border border-gray-300 shadow-inner overflow-y-auto max-h-[800px]">
+                            <div className="lg:col-span-8 bg-gray-200 p-6 rounded-xl border border-gray-300 shadow-inner overflow-y-auto max-h-[297mm]">
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-bold text-gray-700 flex items-center gap-2"><ImageIcon size={20}/> 仕上がりプレビュー</h3>
-                                    <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">写真エリアに画像をドロップ</span>
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="font-bold text-gray-700 flex items-center gap-2"><ImageIcon size={20}/> 仕上がりプレビュー</h3>
+                                        <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded hidden sm:inline-block">写真エリアに画像をドロップ</span>
+                                    </div>
+                                    <button type="button" onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition transform hover:scale-[1.05] text-sm">
+                                        <PrinterIcon size={18} /> 印刷する
+                                    </button>
                                 </div>
                                 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {students.map((student) => (
                                         <div key={student.id} className="transform scale-90 origin-top-left sm:scale-100">
                                             <LicenseCard 
