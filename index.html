@@ -262,7 +262,7 @@
         </div>
     </div>
 
-    <!-- JavaScript ロジック (Vanilla JS / ES5準拠の安全な構文で記述) -->
+    <!-- JavaScript ロジック (Vanilla JS / ES5準拠 of 構文) -->
     <script>
         // --- アプリケーション状態(State)の一元管理 ---
         var state = {
@@ -545,15 +545,13 @@
                 return '<span class="my-[2px]">' + ch + '</span>';
             }).join('');
 
-            // 有効期限テキスト
-            var validitySpans = (state.validityText || '').split('').map(function(ch) {
-                return '<span class="text-[10pt] font-bold text-black leading-none transform scale-y-105">' + ch + '</span>';
-            }).join('');
+            // 有効期限テキスト (金色の帯の内側、左寄りのインライン配置)
+            var validitySpans = '<span class="text-[8.5pt] font-bold text-black leading-none pl-2 transform scale-y-105">' + (state.validityText || '') + '</span>';
 
             var ROW_HEIGHT = "h-[5mm]";
             var LABEL_CELL_STYLE = "w-10 text-center border-r border-gray-400 mr-1 flex items-center justify-center font-bold text-gray-600 whitespace-nowrap h-full bg-gray-50";
 
-            // メインHTMLカードブロック
+            // メインHTMLカードブロック (左右比率を 62% : 38% に調整し、右端余白 pr-[1.5mm] を設定)
             return '<div class="relative w-[85.6mm] h-[54mm] rounded-[2mm] overflow-hidden flex flex-col shadow-md box-border select-none font-rounded text-gray-900 border border-gray-400 bg-white p-[2mm]" style="min-width: 85.6mm; min-height: 54mm;">' +
                 // 行1: 氏名
                 '<div class="flex items-stretch border border-gray-400 bg-[#fdfdfd] rounded-sm ' + ROW_HEIGHT + ' mb-[0.5mm] px-0 w-full overflow-hidden">' +
@@ -578,11 +576,11 @@
                 '</div>' +
                 // 行3: 本文グリッド分割
                 '<div class="flex-1 flex gap-[1px] pt-0 overflow-hidden">' +
-                // 本文左ブロック
-                '<div style="width: 67%" class="flex flex-col gap-[1px] shrink-0">' +
-                // 有効表示
-                '<div class="w-full bg-[#cfae46] h-[6mm] flex items-center px-1 border border-[#b09030] border-t-0">' +
-                '<div class="w-full flex justify-between items-center px-1">' + validitySpans + '</div>' +
+                // 本文左ブロック (62%に微調整して右側の写真エリアを拡張)
+                '<div style="width: 62%" class="flex flex-col gap-[1px] shrink-0">' +
+                // 有効表示 (左寄せに変更)
+                '<div class="w-full bg-[#cfae46] h-[6mm] flex items-center border border-[#b09030] border-t-0 pl-1.5">' +
+                '<div class="w-full flex justify-start items-center">' + validitySpans + '</div>' +
                 '</div>' +
                 // 条件等
                 '<div class="w-full border border-gray-600 rounded-sm bg-[#fcfcfc] px-0 py-[1px] flex items-stretch flex-1 mb-[0.5mm] overflow-hidden min-h-[6mm]">' +
@@ -626,9 +624,9 @@
                 '</div>' +
                 '</div>' +
                 '</div>' +
-                // 本文右ブロック（写真と縦書きタイトル）
-                '<div class="flex-1 flex gap-1 pl-1 overflow-hidden">' +
-                // 縦書きタイトル
+                // 本文右ブロック (幅を38%に拡張、右端にpr-[2mm]の余白を強制して写真のハミ出しを解消)
+                '<div class="flex-1 flex gap-1 pl-1 overflow-hidden pr-[2mm]">' +
+                // 縦書きタイトル (九九免許証)
                 '<div class="flex flex-col items-center justify-center h-full w-[8mm] shrink-0">' +
                 '<div class="text-blue-700 font-bold flex flex-col items-center justify-center h-full text-[10pt] leading-tight tracking-widest">' + titleVertical + '</div>' +
                 '</div>' +
